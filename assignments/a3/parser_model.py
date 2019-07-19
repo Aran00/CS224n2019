@@ -47,7 +47,7 @@ class ParserModel(nn.Module):
         self.embed_size = embeddings.shape[1]
         self.hidden_size = hidden_size
         self.pretrained_embeddings = nn.Embedding(embeddings.shape[0], self.embed_size)
-        self.pretrained_embeddings.weight = nn.Parameter(torch.tensor(embeddings))
+        self.pretrained_embeddings.weight = nn.Parameter(torch.tensor(embeddings), requires_grad=False)
 
         ### YOUR CODE HERE (~5 Lines)
         ### TODO:
@@ -71,8 +71,11 @@ class ParserModel(nn.Module):
         ###     Linear Layer: https://pytorch.org/docs/stable/nn.html#torch.nn.Linear
         ###     Xavier Init: https://pytorch.org/docs/stable/nn.html#torch.nn.init.xavier_uniform_
         ###     Dropout: https://pytorch.org/docs/stable/nn.html#torch.nn.Dropout
-
-
+        self.embed_to_hidden = nn.Linear(self.n_features * self.embed_size, self.hidden_size)
+        nn.init.xavier_uniform_(self.embed_to_hidden.weight)
+        self.dropout = nn.Dropout(p=self.dropout_prob)
+        self.hidden_to_logits = nn.Linear(self.hidden_size, self.n_classes)
+        nn.init.xavier_uniform_(self.hidden_to_logits.weight)
         ### END YOUR CODE
 
     def embedding_lookup(self, t):
@@ -103,8 +106,8 @@ class ParserModel(nn.Module):
         ###  Please see the following docs for support:
         ###     Embedding Layer: https://pytorch.org/docs/stable/nn.html#torch.nn.Embedding
         ###     View: https://pytorch.org/docs/stable/tensors.html#torch.Tensor.view
-
-
+        x = self.pretrained_embeddings(t)
+        x = x.view(-1, self.n_features * self.embed_size)
         ### END YOUR CODE
         return x
 
@@ -141,7 +144,10 @@ class ParserModel(nn.Module):
         ###
         ### Please see the following docs for support:
         ###     ReLU: https://pytorch.org/docs/stable/nn.html?highlight=relu#torch.nn.functional.relu
-
-
+        output = self.embedding_lookup(t)
+        output = self.embed_to_hidden(output)
+        output = F.relu(output)
+        output = self.dropout(output)
+        logits = self.hidden_to_logits(output)
         ### END YOUR CODE
         return logits
