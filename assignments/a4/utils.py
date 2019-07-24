@@ -9,7 +9,10 @@ Sahil Chopra <schopra8@stanford.edu>
 """
 
 import math
+import sys
 from typing import List
+from functools import reduce
+from docopt import docopt
 
 import numpy as np
 import torch
@@ -29,8 +32,9 @@ def pad_sents(sents, pad_token):
     sents_padded = []
 
     ### YOUR CODE HERE (~6 Lines)
-
-
+    sents_len = list(map(lambda x: len(x), sents))
+    max_len = reduce(lambda x, y: x if x > y else y, sents_len, 0)
+    sents_padded = [sent + [pad_token] * (max_len - len(sent)) for sent in sents]
     ### END YOUR CODE
 
     return sents_padded
@@ -76,3 +80,20 @@ def batch_iter(data, batch_size, shuffle=False):
 
         yield src_sents, tgt_sents
 
+
+def pad_sents_sanity_check():
+    sents = [['I', 'want', 'to', 'eat'],
+             ['Good', 'day'],
+             ['What']]
+    print(pad_sents(sents, '<UNK>'))
+    print('pad_sents sanity check passed!')
+
+
+def main():
+    args = sys.argv
+    if args[1] == 'padding':
+        pad_sents_sanity_check()
+
+
+if __name__ == '__main__':
+    main()
