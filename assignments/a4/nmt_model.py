@@ -186,7 +186,7 @@ class NMT(nn.Module):
         '''
         # Another
         last_hidden = last_hidden.permute(1, 0, 2)
-        print(last_hidden.size())
+        # print(last_hidden.size())
         last_hidden = last_hidden.contiguous().view(batch_size, -1)
         last_cell = torch.cat([last_cell[i] for i in range(layer_num)], 1)
         init_decoder_hidden = self.h_projection(last_hidden)
@@ -400,10 +400,10 @@ class NMT(nn.Module):
                 value: List[str]: the decoded target sentence, represented as a list of words
                 score: float: the log-likelihood of the target sentence
         """
-        src_sents_var = self.vocab.src.to_input_tensor([src_sent], self.device)
+        src_sents_var = self.vocab.src.to_input_tensor([src_sent], self.device)  # [src_len, 1]
 
         src_encodings, dec_init_vec = self.encode(src_sents_var, [len(src_sent)])
-        src_encodings_att_linear = self.att_projection(src_encodings)
+        src_encodings_att_linear = self.att_projection(src_encodings)  # [b, src_len, h]
 
         h_tm1 = dec_init_vec
         att_tm1 = torch.zeros(1, self.hidden_size, device=self.device)
@@ -420,8 +420,8 @@ class NMT(nn.Module):
             hyp_num = len(hypotheses)
 
             exp_src_encodings = src_encodings.expand(hyp_num,
-                                                     src_encodings.size(1),
-                                                     src_encodings.size(2))
+                                                     src_encodings.size(1),   # batch: 1
+                                                     src_encodings.size(2))   # 2 * h
 
             exp_src_encodings_att_linear = src_encodings_att_linear.expand(hyp_num,
                                                                            src_encodings_att_linear.size(1),
@@ -432,14 +432,14 @@ class NMT(nn.Module):
 
             x = torch.cat([y_t_embed, att_tm1], dim=-1)
 
-            (h_t, cell_t), att_t, _  = self.step(x, h_tm1,
+            (h_t, cell_t), att_t, _ = self.step(x, h_tm1,
                                                       exp_src_encodings, exp_src_encodings_att_linear, enc_masks=None)
 
             # log probabilities over target words
             log_p_t = F.log_softmax(self.target_vocab_projection(att_t), dim=-1)
 
             live_hyp_num = beam_size - len(completed_hypotheses)
-            contiuating_hyp_scores = (hyp_scores.unsqueeze(1).expand_as(log_p_t) + log_p_t).view(-1)
+            contiuating_hyp_scores = (hyp_scores.unsqueeze(1).expand_as(log_p_t) + log_p_t).view(-1)    # view(-1): Flattened
             top_cand_hyp_scores, top_cand_hyp_pos = torch.topk(contiuating_hyp_scores, k=live_hyp_num)
 
             prev_hyp_ids = top_cand_hyp_pos / len(self.vocab.tgt)
