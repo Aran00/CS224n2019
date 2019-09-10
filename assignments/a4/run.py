@@ -44,6 +44,7 @@ import math
 import sys
 import pickle
 import time
+import json
 
 
 from docopt import docopt
@@ -57,6 +58,7 @@ from vocab import Vocab, VocabEntry
 
 import torch
 import torch.nn.utils
+import matplotlib
 
 
 def evaluate_ppl(model, dev_data, batch_size=32):
@@ -152,6 +154,9 @@ def train(args: Dict):
     train_time = begin_time = time.time()
     print('begin Maximum Likelihood training')
 
+    train_ppls = []
+    valid_ppls = []
+
     while True:
         epoch += 1
 
@@ -183,17 +188,20 @@ def train(args: Dict):
             report_examples += batch_size
             cum_examples += batch_size
 
+
             if train_iter % log_every == 0:
+                train_ppl = math.exp(report_loss / report_tgt_words)
                 print('epoch %d, iter %d, avg. loss %.2f, avg. ppl %.2f ' \
                       'cum. examples %d, speed %.2f words/sec, time elapsed %.2f sec' % (epoch, train_iter,
                                                                                          report_loss / report_examples,
-                                                                                         math.exp(report_loss / report_tgt_words),
+                                                                                         train_ppl,
                                                                                          cum_examples,
                                                                                          report_tgt_words / (time.time() - train_time),
                                                                                          time.time() - begin_time), file=sys.stderr)
 
                 train_time = time.time()
                 report_loss = report_tgt_words = report_examples = 0.
+                train_ppls.append([train_iter, train_ppl])
 
             # perform validation
             if train_iter % valid_niter == 0:
@@ -210,6 +218,7 @@ def train(args: Dict):
                 # compute dev. ppl and bleu
                 dev_ppl = evaluate_ppl(model, dev_data, batch_size=128)   # dev batch size can be a bit larger
                 valid_metric = -dev_ppl
+                valid_ppls.append([train_iter, dev_ppl])
 
                 print('validation: iter %d, dev. ppl %f' % (train_iter, dev_ppl), file=sys.stderr)
 
@@ -255,6 +264,13 @@ def train(args: Dict):
 
                 if epoch == int(args['--max-epoch']):
                     print('reached maximum number of epochs!', file=sys.stderr)
+                    # save the ppls, and output it to file
+                    with open('ppls.json', 'w') as outfile:
+                        json.dump({
+                            'train_ppls': train_ppls,
+                            'val_ppls': valid_ppls
+                        }, outfile)
+
                     exit(0)
 
 

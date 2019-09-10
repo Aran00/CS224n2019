@@ -171,7 +171,7 @@ class NMT(nn.Module):
         ###         https://pytorch.org/docs/stable/tensors.html#torch.Tensor.permute
         '''
         How could the sanity test control the initial weight of Linear and embedding, to match the result?
-        Answer: 
+        Answer: They reset the weights to a determined value.
         
         '''
         X = self.model_embeddings.source(source_padded)  # (src_len, b, e)

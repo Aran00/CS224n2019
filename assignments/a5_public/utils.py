@@ -10,6 +10,7 @@ Sahil Chopra <schopra8@stanford.edu>
 
 import math
 from typing import List
+from functools import reduce
 
 import numpy as np
 import torch
@@ -40,10 +41,11 @@ def pad_sents_char(sents, char_pad_token):
     ###
     ###     You should NOT use the method `pad_sents()` below because of the way it handles
     ###     padding and unknown words.
-
-
+    max_sent_length = max([len(sent) for sent in sents])
+    padding_word = max_word_length * [char_pad_token]
+    sents_padded = [[word + (max_word_length - len(word)) * [char_pad_token] for word in sent]
+                    + (max_sent_length - len(sent)) * [padding_word] for sent in sents]
     ### END YOUR CODE
-
     return sents_padded
 
 
@@ -60,8 +62,9 @@ def pad_sents(sents, pad_token):
     sents_padded = []
 
     ### COPY OVER YOUR CODE FROM ASSIGNMENT 4
-
-
+    sents_len = list(map(lambda x: len(x), sents))
+    max_len = reduce(lambda x, y: x if x > y else y, sents_len, 0)
+    sents_padded = [sent + [pad_token] * (max_len - len(sent)) for sent in sents]
     ### END YOUR CODE FROM ASSIGNMENT 4
 
     return sents_padded

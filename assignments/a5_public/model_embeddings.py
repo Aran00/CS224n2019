@@ -9,7 +9,7 @@ Sahil Chopra <schopra8@stanford.edu>
 Anand Dhoot <anandd@stanford.edu>
 Michael Hahn <mhahn2@stanford.edu>
 """
-
+import torch
 import torch.nn as nn
 
 # Do not change these imports; your module names should be
@@ -17,8 +17,8 @@ import torch.nn as nn
 #   `Highway` in the file `highway.py`
 # Uncomment the following two imports once you're ready to run part 1(j)
 
-# from cnn import CNN
-# from highway import Highway
+from cnn import CNN
+from highway import Highway
 
 # End "do not change" 
 
@@ -40,8 +40,14 @@ class ModelEmbeddings(nn.Module):
         ## End A4 code
 
         ### YOUR CODE HERE for part 1j
-
-
+        dropout = 0.3
+        char_embed_size = 50
+        pad_char_idx = vocab.char2id['<pad>']
+        self.embed_size = embed_size
+        self.embeddings = nn.Embedding(len(vocab.char2id), char_embed_size, padding_idx=pad_char_idx)
+        self.conv1d = CNN(char_embed_size, embed_size)
+        self.highway = Highway(embed_size)
+        self.dropout = nn.Dropout(dropout)
         ### END YOUR CODE
 
     def forward(self, input):
@@ -59,7 +65,12 @@ class ModelEmbeddings(nn.Module):
         ## End A4 code
 
         ### YOUR CODE HERE for part 1j
-
-
+        char_embeddings = self.embeddings(input)    # (sentence_length, batch_size, max_word_length, char_embed_size)
+        sentence_length, batch_size, max_word_length, char_embed_size = char_embeddings.size()
+        char_embeddings_reshape = torch.transpose(char_embeddings, 2, 3).view(-1, char_embed_size, max_word_length)
+        x_conv_out = self.conv1d(char_embeddings_reshape)
+        x_highway = self.highway(x_conv_out)
+        x_word_emb = self.dropout(x_highway).view(sentence_length, batch_size, self.embed_size)
+        return x_word_emb
         ### END YOUR CODE
 
