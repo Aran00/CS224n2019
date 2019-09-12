@@ -161,7 +161,7 @@ class VocabEntry(object):
         sents_char_ids = self.words2charindices(sents)
         padded_sents_char_ids = pad_sents_char(sents_char_ids, self.char2id['<pad>'])
         sents_var = torch.tensor(padded_sents_char_ids, dtype=torch.long, device=device)
-        return sents_var.permute(1, 0, 2)
+        return sents_var.transpose(0, 1).contiguous()  #sents_var.permute(1, 0, 2)
         ### END YOUR CODE
 
     def to_input_tensor(self, sents: List[List[str]], device: torch.device) -> torch.Tensor:

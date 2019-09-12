@@ -67,7 +67,8 @@ class ModelEmbeddings(nn.Module):
         ### YOUR CODE HERE for part 1j
         char_embeddings = self.embeddings(input)    # (sentence_length, batch_size, max_word_length, char_embed_size)
         sentence_length, batch_size, max_word_length, char_embed_size = char_embeddings.size()
-        char_embeddings_reshape = torch.transpose(char_embeddings, 2, 3).view(-1, char_embed_size, max_word_length)
+        # Need to cast 4D tensor to 3D as only 3D could be the input of conv1d layer. Is there any other way?
+        char_embeddings_reshape = char_embeddings.transpose(2, 3).view(-1, char_embed_size, max_word_length)
         x_conv_out = self.conv1d(char_embeddings_reshape)
         x_highway = self.highway(x_conv_out)
         x_word_emb = self.dropout(x_highway).view(sentence_length, batch_size, self.embed_size)

@@ -8,6 +8,7 @@ CS224N 2018-19: Homework 5
 import torch
 import torch.nn as nn
 
+
 class CharDecoder(nn.Module):
     def __init__(self, hidden_size, char_embedding_size=50, target_vocab=None):
         """ Init Character Decoder.
@@ -27,11 +28,15 @@ class CharDecoder(nn.Module):
         ### Hint: - Use target_vocab.char2id to access the character vocabulary for the target language.
         ###       - Set the padding_idx argument of the embedding matrix.
         ###       - Create a new Embedding layer. Do not reuse embeddings created in Part 1 of this assignment.
-        
-
+        super(CharDecoder, self).__init__()
+        self.charDecoder = nn.LSTM(char_embedding_size, hidden_size)
+        total_target_char_count = len(target_vocab.char2id)
+        self.char_output_projection = nn.Linear(hidden_size, total_target_char_count)
+        # So we don't use pre-trained embed vectors, like GLOVE in these 2 assignments. Could it be used to improve?
+        self.decoderCharEmb = nn.Embedding(total_target_char_count, char_embedding_size,
+                                           padding_idx=target_vocab.char2id['<pad>'])
+        self.target_vocab = target_vocab
         ### END YOUR CODE
-
-
     
     def forward(self, input, dec_hidden=None):
         """ Forward pass of character decoder.
@@ -44,10 +49,11 @@ class CharDecoder(nn.Module):
         """
         ### YOUR CODE HERE for part 2b
         ### TODO - Implement the forward pass of the character decoder.
-        
-        
+        embeded_input = self.decoderCharEmb(input)                          # shape (length, batch, char_embedding_size)
+        output, dec_hidden = self.charDecoder(embeded_input, dec_hidden)    # output shape (length, batch, hidden_size)
+        scores = self.char_output_projection(output)
+        return scores, dec_hidden
         ### END YOUR CODE 
-
 
     def train_forward(self, char_sequence, dec_hidden=None):
         """ Forward computation during training.
@@ -62,8 +68,13 @@ class CharDecoder(nn.Module):
         ###
         ### Hint: - Make sure padding characters do not contribute to the cross-entropy loss.
         ###       - char_sequence corresponds to the sequence x_1 ... x_{n+1} from the handout (e.g., <START>,m,u,s,i,c,<END>).
-
-
+        input = char_sequence[:-1]
+        targets = char_sequence[1:]       # (length - 1, batch)
+        logits, _ = self.forward(input, dec_hidden)     # (length - 1, batch, char_count)
+        # Use ignore_index to filter the padded chars
+        loss = nn.CrossEntropyLoss(ignore_index=self.target_vocab.char2id['<pad>'], reduction='sum')
+        output = loss(logits.view(-1, len(self.target_vocab.char2id)), targets.contiguous().view(-1))
+        return output
         ### END YOUR CODE
 
     def decode_greedy(self, initialStates, device, max_length=21):
@@ -83,7 +94,20 @@ class CharDecoder(nn.Module):
         ###      - Use torch.tensor(..., device=device) to turn a list of character indices into a tensor.
         ###      - We use curly brackets as start-of-word and end-of-word characters. That is, use the character '{' for <START> and '}' for <END>.
         ###        Their indices are self.target_vocab.start_of_word and self.target_vocab.end_of_word, respectively.
-        
-        
+        _, batch, _ = initialStates[0].size()
+        target_vocab = self.target_vocab
+        dec_hidden = initialStates
+        softmax = nn.Softmax(dim=-1)
+        output_words = ["" for _ in range(batch)]
+        input = torch.tensor([target_vocab.char2id['{'] for _ in range(batch)], device=device).unsqueeze(0)    # (1, batch)
+        for t in range(max_length):
+            # Need a tensor whose shape is (length, batch)
+            logits, dec_hidden = self.forward(input, dec_hidden)
+            scores = softmax(logits)        # (1, batch, char_count)
+            input = torch.argmax(scores, dim=-1)
+            output_chars = input.squeeze(0).tolist()
+            output_words = [(output_words[i] + target_vocab.id2char[output_chars[i]]) for i in range(batch)]
+        decoded_words = [output_word[:output_word.find("}")] if "}" in output_word else output_word for output_word in output_words]
+        return decoded_words
         ### END YOUR CODE
 
