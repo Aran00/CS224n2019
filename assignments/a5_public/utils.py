@@ -43,7 +43,8 @@ def pad_sents_char(sents, char_pad_token):
     ###     padding and unknown words.
     max_sent_length = max([len(sent) for sent in sents])
     padding_word = max_word_length * [char_pad_token]
-    sents_padded = [[word + (max_word_length - len(word)) * [char_pad_token] for word in sent]
+    sents_padded = [[word + (max_word_length - len(word)) * [char_pad_token]
+                     if len(word) < max_word_length else word[:max_word_length] for word in sent]
                     + (max_sent_length - len(sent)) * [padding_word] for sent in sents]
     ### END YOUR CODE
     return sents_padded
