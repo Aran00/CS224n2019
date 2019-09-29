@@ -2,6 +2,21 @@
 # -*- coding: utf-8 -*-
 
 """
+The things remaining before regulating the params:
+1. Output the loss data in the log into a file.
+This file should contain all the hyper params and the corresponding loss data.
+(or 2 files?)
+2. Add a matplot jupyter notebook to draw the loss line.
+(or also save the figure?)
+3. How to translate this program to a Kaggle pipeline?
+
+The remaining questions of this program:
+1. Is the word embedding vector also be trained? -- Seems it is
+2. The loss calculation. So the loss is still calculated by word vector?
+3. How many iterations could we see whether the loss degrades normally?
+"""
+
+"""
 CS224N 2018-19: Homework 5
 run.py: Run Script for Simple NMT Model
 Pencheng Yin <pcyin@cs.cmu.edu>
